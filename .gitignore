@@ -1,0 +1,24 @@
+# PHP
+composer.lock
+vendor/
+
+# Database Configuration
+config/database.php
+
+# Uploads
+uploads/identitas/*
+uploads/pembayaran/*
+!uploads/identitas/.gitkeep
+!uploads/pembayaran/.gitkeep
+
+# Environment/OS
+.env
+.DS_Store
+Thumbs.db
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

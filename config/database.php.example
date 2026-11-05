@@ -1,0 +1,101 @@
+<?php
+// ----- EXAMPLE CONFIG KONEKSI DATABASE -----
+// Rename this file to database.php and fill in your credentials
+
+// Define Global Constants
+define('BASE_URL', '/' . basename(dirname(__DIR__)) . '/');
+define('ROOT_PATH', dirname(__DIR__) . '/');
+
+$host = "localhost";
+$user = "root";      
+$pass = "";          
+$db   = "peminjaman_uks";
+
+$dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
+
+try {
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+} catch (PDOException $e) {
+    die("Koneksi database gagal: " . $e->getMessage());
+}
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// ===============================
+// SECURITY: CSRF PROTECTION
+// ===============================
+function generate_csrf_token() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function validate_csrf_token($token) {
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+// ===============================
+// FLASH MESSAGES (Swal Helper)
+// ===============================
+function set_flash($type, $title, $message) {
+    $_SESSION['flash'] = [
+        'type'    => $type,
+        'title'   => $title,
+        'message' => $message
+    ];
+}
+
+function get_flash() {
+    if (isset($_SESSION['flash'])) {
+        $flash = $_SESSION['flash'];
+        unset($_SESSION['flash']);
+        return $flash;
+    }
+    return null;
+}
+
+// ===============================
+// SESSION NORMALIZATION
+// ===============================
+if (isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
+    $_SESSION['user'] = [
+        'id'       => $_SESSION['user_id'],
+        'name'     => $_SESSION['name'] ?? 'Admin',
+        'role'     => $_SESSION['role'] ?? 'admin',
+        'is_admin' => true
+    ];
+}
+
+// Global Constants
+if (!defined('DENDA_PER_HARI')) {
+    define('DENDA_PER_HARI', 50000);
+}
+
+/**
+ * Centalized Helper to calculate fine based on return date.
+ */
+function calculate_fine($tgl_kembali) {
+    $tgl_kembali_end = strtotime($tgl_kembali . ' 23:59:59');
+    $now = time();
+    $denda = 0;
+    $lateDays = 0;
+
+    if ($now > $tgl_kembali_end) {
+        $diff = $now - $tgl_kembali_end;
+        $lateDays = ceil($diff / (60 * 60 * 24));
+        $denda = $lateDays * DENDA_PER_HARI;
+    }
+    
+    return [
+        'denda' => $denda,
+        'late_days' => $lateDays
+    ];
+}
+?>
